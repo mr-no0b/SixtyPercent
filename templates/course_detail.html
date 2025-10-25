@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.course_code }} - SixtyPercent{% endblock %}
+
+{% block content %}
+<div class="course-detail">
+    <div class="course-header-detail">
+        <div>
+            <h1>{{ course.course_code }}: {{ course.course_name }}</h1>
+            <p class="teacher-info">👨‍🏫 Taught by {{ course.teacher_name }}</p>
+            <p class="semester-info">📅 {{ course.semester }}</p>
+        </div>
+        <a href="{{ url_for('mark_attendance', course_id=course.id) }}" class="btn btn-primary">Mark Attendance</a>
+    </div>
+    
+    <!-- Danger Zone and Dead Zone Warnings -->
+    {% if dead_zone %}
+    <div class="alert alert-dead-zone">
+        <strong>☠️ DEAD ZONE</strong>
+        <p>Even if you attend all remaining {{ remaining_classes }} classes, you cannot reach {{ required_percentage }}% attendance!</p>
+        <p>Current: {{ present }} present out of {{ total_classes }} total classes = {{ current_percentage }}%</p>
+    </div>
+    {% elif danger_zone %}
+    <div class="alert alert-danger-zone">
+        <strong>⚠️ DANGER ZONE</strong>
+        <p>You must attend ALL remaining {{ remaining_classes }} classes to reach {{ required_percentage }}% attendance!</p>
+        <p>You cannot miss any more classes!</p>
+    </div>
+    {% endif %}
+    
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Total Classes</h3>
+            <p class="big-number">{{ total_classes }}</p>
+            <small>Scheduled</small>
+        </div>
+        <div class="stat-card">
+            <h3>Classes Held</h3>
+            <p class="big-number">{{ classes_held }}</p>
+            <small>Marked so far</small>
+        </div>
+        <div class="stat-card">
+            <h3>Remaining</h3>
+            <p class="big-number blue">{{ remaining_classes }}</p>
+            <small>Yet to be held</small>
+        </div>
+        <div class="stat-card">
+            <h3>Present</h3>
+            <p class="big-number green">{{ present }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Absent</h3>
+            <p class="big-number red">{{ absent }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Current %</h3>
+            <p class="big-number {% if current_percentage >= required_percentage %}green{% else %}red{% endif %}">
+                {{ current_percentage }}%
+            </p>
+            <small>Of total classes</small>
+        </div>
+    </div>
+    
+    <!-- Smart Attendance Predictions -->
+    <div class="predictions-section">
+        <h3>📊 Attendance Analysis</h3>
+        <div class="prediction-cards">
+            <div class="prediction-card {% if classes_needed == 0 %}success{% else %}warning{% endif %}">
+                <h4>Classes Needed</h4>
+                <p class="prediction-number">{{ classes_needed }}</p>
+                <small>More classes you must attend to reach {{ required_percentage }}%</small>
+            </div>
+            <div class="prediction-card {% if classes_can_miss > 0 %}success{% else %}danger{% endif %}">
+                <h4>Classes You Can Miss</h4>
+                <p class="prediction-number">{{ classes_can_miss }}</p>
+                <small>Classes you can afford to miss and still reach {{ required_percentage }}%</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="attendance-section">
+        <h2>Attendance Records</h2>
+        
+        {% if attendance %}
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance %}
+                    <tr>
+                        <td>{{ record.class_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <span class="status-badge status-{{ record.status }}">
+                                {{ record.status|capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ record.notes or '-' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('edit_attendance', attendance_id=record.id) }}" style="display: inline;">
+                                <select name="status" onchange="this.form.submit()">
+                                    <option value="present" {% if record.status == 'present' %}selected{% endif %}>Present</option>
+                                    <option value="absent" {% if record.status == 'absent' %}selected{% endif %}>Absent</option>
+                                </select>
+                            </form>
+                            <form method="POST" action="{{ url_for('delete_attendance', attendance_id=record.id) }}" 
+                                  style="display: inline;" onsubmit="return confirm('Delete this record?');">
+                                <button type="submit" class="btn-delete">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="empty-message">No attendance records yet. Start marking your attendance!</p>
+        {% endif %}
+    </div>
+    
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+{% endblock %}

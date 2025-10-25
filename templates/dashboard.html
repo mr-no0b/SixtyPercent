@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SixtyPercent{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome, {{ session.get('full_name') }}! 👋</h1>
+    <p class="subtitle">Your Attendance Overview</p>
+    
+    {% if courses %}
+        <div class="courses-grid">
+            {% for course in courses %}
+            <div class="course-card {% if course.attendance_percentage and course.attendance_percentage < course.required_percentage %}warning{% endif %}">
+                <div class="course-header">
+                    <h3>{{ course.course_code }}</h3>
+                    <span class="percentage {% if course.attendance_percentage and course.attendance_percentage >= course.required_percentage %}good{% elif course.attendance_percentage %}bad{% else %}neutral{% endif %}">
+                        {{ course.attendance_percentage if course.attendance_percentage else '0.00' }}%
+                    </span>
+                </div>
+                
+                <h4>{{ course.course_name }}</h4>
+                <p class="teacher">👨‍🏫 {{ course.teacher_name }}</p>
+                
+                <div class="course-stats">
+                    <div class="stat">
+                        <span class="stat-label">Present/Total:</span>
+                        <span class="stat-value">{{ course.present_count or 0 }}/{{ course.total_classes }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Required:</span>
+                        <span class="stat-value">{{ course.required_percentage }}%</span>
+                    </div>
+                </div>
+                
+                {% if course.dead_zone %}
+                    <div class="dead-zone-badge">
+                        ☠️ DEAD ZONE - Can't reach {{ course.required_percentage }}%
+                    </div>
+                {% elif course.danger_zone %}
+                    <div class="danger-zone-badge">
+                        ⚠️ DANGER ZONE - Must attend all {{ course.remaining_classes }} remaining!
+                    </div>
+                {% elif course.classes_can_miss > 0 %}
+                    <div class="safe-zone-badge">
+                        ✅ Can miss {{ course.classes_can_miss }} more class{{ 'es' if course.classes_can_miss != 1 else '' }}
+                    </div>
+                {% elif course.classes_held > 0 %}
+                    <div class="warning-badge">
+                        ⚠️ Cannot miss any more classes!
+                    </div>
+                {% else %}
+                    <div class="info-message">
+                        ℹ️ No attendance recorded yet
+                    </div>
+                {% endif %}
+                
+                <a href="{{ url_for('course_detail', course_id=course.course_id) }}" class="btn btn-secondary">View Details</a>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>No Courses Enrolled</h2>
+            <p>You haven't created any courses yet. Get started by adding your first course!</p>
+            <a href="{{ url_for('add_course') }}" class="btn btn-primary">➕ Add Your First Course</a>
+            <a href="{{ url_for('add_teacher') }}" class="btn btn-secondary">👨‍🏫 Add a Teacher First</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

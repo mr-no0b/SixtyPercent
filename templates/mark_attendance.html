@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Mark Attendance - SixtyPercent{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Mark Attendance</h1>
+    <h2>{{ course.course_code }}: {{ course.course_name }}</h2>
+    
+    <div class="info-box" style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p><strong>📊 Course Info:</strong></p>
+        <p>Total Classes: <strong>{{ course.total_classes }}</strong></p>
+        <p>Classes Marked: <strong>{{ course.classes_held }}</strong></p>
+        <p>Remaining: <strong>{{ course.total_classes - course.classes_held }}</strong></p>
+    </div>
+    
+    <form method="POST" action="{{ url_for('mark_attendance', course_id=course_id) }}" class="attendance-form">
+        <div class="form-group">
+            <label for="class_date">Class Date</label>
+            <input type="date" id="class_date" name="class_date" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Status</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="status" value="present" required checked>
+                    <span class="radio-text">✅ Present</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="status" value="absent" required>
+                    <span class="radio-text">❌ Absent</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">Notes (optional)</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Add any notes about this class..."></textarea>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Attendance</button>
+            <a href="{{ url_for('course_detail', course_id=course_id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Set today's date as default
+    document.getElementById('class_date').valueAsDate = new Date();
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}My Teachers - SixtyPercent{% endblock %}
+
+{% block content %}
+<div class="courses-page">
+    <div class="page-header">
+        <div>
+            <h1>My Teachers</h1>
+            <p class="subtitle">Manage your teachers</p>
+        </div>
+        <a href="{{ url_for('add_teacher') }}" class="btn btn-primary">➕ Add New Teacher</a>
+    </div>
+    
+    {% if teachers %}
+        <div class="courses-list">
+            {% for teacher in teachers %}
+            <div class="course-item">
+                <div class="course-info">
+                    <h3>👨‍🏫 {{ teacher.name }}</h3>
+                    {% if teacher.email %}
+                        <p class="teacher">📧 {{ teacher.email }}</p>
+                    {% endif %}
+                    {% if teacher.department %}
+                        <p class="semester">🏢 {{ teacher.department }}</p>
+                    {% endif %}
+                    <p class="total-classes">📚 Courses: {{ teacher.course_count }}</p>
+                </div>
+                
+                <div class="course-actions">
+                    {% if teacher.course_count > 0 %}
+                        <span class="enrolled-badge">{{ teacher.course_count }} course(s)</span>
+                        <a href="{{ url_for('edit_teacher', teacher_id=teacher.id) }}" class="btn btn-small btn-secondary">✏️ Edit</a>
+                    {% else %}
+                        <a href="{{ url_for('edit_teacher', teacher_id=teacher.id) }}" class="btn btn-small btn-secondary">✏️ Edit</a>
+                        <form method="POST" action="{{ url_for('delete_teacher', teacher_id=teacher.id) }}" 
+                              style="display: inline;" onsubmit="return confirm('Delete this teacher?');">
+                            <button type="submit" class="btn btn-small btn-danger">🗑️ Delete</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>No Teachers Yet</h2>
+            <p>You haven't added any teachers yet. Add teachers to assign them to your courses!</p>
+            <a href="{{ url_for('add_teacher') }}" class="btn btn-primary">➕ Add Your First Teacher</a>
+        </div>
+    {% endif %}
+    
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+{% endblock %}

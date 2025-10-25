@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Teacher - SixtyPercent{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Edit Teacher</h1>
+    <p class="subtitle">Update teacher information</p>
+    
+    <form method="POST" action="{{ url_for('edit_teacher', teacher_id=teacher.id) }}" class="attendance-form">
+        <div class="form-group">
+            <label for="name">Teacher Name *</label>
+            <input type="text" id="name" name="name" 
+                   value="{{ teacher.name }}" placeholder="e.g., Dr. John Smith" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" 
+                   value="{{ teacher.email or '' }}" placeholder="e.g., john.smith@university.edu">
+        </div>
+        
+        <div class="form-group">
+            <label for="department">Department</label>
+            <input type="text" id="department" name="department" 
+                   value="{{ teacher.department or '' }}" placeholder="e.g., Computer Science">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('teachers') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

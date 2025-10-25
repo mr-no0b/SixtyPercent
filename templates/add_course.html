@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Add Course - SixtyPercent{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Add New Course</h1>
+    <p class="subtitle">Create a course to track attendance</p>
+    
+    {% if not teachers %}
+        <div class="alert alert-warning">
+            <strong>⚠️ No Teachers Found!</strong>
+            <p>You need to add a teacher first before creating a course.</p>
+            <a href="{{ url_for('add_teacher', redirect='add_course') }}" class="btn btn-primary">Add Teacher First</a>
+            <a href="{{ url_for('courses') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    {% else %}
+        <form method="POST" action="{{ url_for('add_course') }}" class="attendance-form">
+            <div class="form-group">
+                <label for="course_code">Course Code *</label>
+                <input type="text" id="course_code" name="course_code" 
+                       placeholder="e.g., CS101" required>
+                <small>Unique identifier for the course</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="course_name">Course Name *</label>
+                <input type="text" id="course_name" name="course_name" 
+                       placeholder="e.g., Introduction to Programming" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="teacher_id">Teacher *</label>
+                <select id="teacher_id" name="teacher_id" required>
+                    <option value="">Select a teacher</option>
+                    {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">
+                            {{ teacher.name }}{% if teacher.department %} - {{ teacher.department }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small>Don't see your teacher? <a href="{{ url_for('add_teacher', redirect='add_course') }}">Add new teacher</a></small>
+            </div>
+            
+            <div class="form-group">
+                <label for="semester">Semester (optional)</label>
+                <input type="text" id="semester" name="semester" 
+                       placeholder="e.g., Fall 2025">
+            </div>
+            
+            <div class="form-group">
+                <label for="total_classes">Total Classes *</label>
+                <input type="number" id="total_classes" name="total_classes" 
+                       placeholder="e.g., 40" min="1" required>
+                <small>Total number of classes in this course (required)</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="required_percentage">Required Attendance Percentage</label>
+                <input type="number" id="required_percentage" name="required_percentage" 
+                       placeholder="60" min="0" max="100" step="0.01" value="60">
+                <small>Minimum attendance percentage required (default: 60%)</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Course</button>
+                <a href="{{ url_for('courses') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

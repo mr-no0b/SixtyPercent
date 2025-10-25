@@ -1,0 +1,508 @@
+═══════════════════════════════════════════════════════════════════════
+            🎯 MAJOR UPDATE - SMART ATTENDANCE TRACKING FEATURES
+═══════════════════════════════════════════════════════════════════════
+
+Date: October 26, 2025
+Project: SixtyPercent Attendance Tracker
+
+═══════════════════════════════════════════════════════════════════════
+📋 OVERVIEW OF CHANGES
+═══════════════════════════════════════════════════════════════════════
+
+This update introduces intelligent attendance prediction features and 
+complete edit functionality for courses and teachers.
+
+═══════════════════════════════════════════════════════════════════════
+✨ NEW FEATURES IMPLEMENTED
+═══════════════════════════════════════════════════════════════════════
+
+1. REQUIRED TOTAL CLASSES
+   ───────────────────────
+   ✅ Total classes is now REQUIRED when creating a course
+   ✅ Cannot be 0 or empty (minimum value: 1)
+   ✅ Database schema updated: total_classes INT NOT NULL DEFAULT 0
+
+2. SMART ATTENDANCE CALCULATIONS
+   ─────────────────────────────
+   ✅ Percentage based on attendance vs TOTAL classes (not just marked)
+   ✅ Classes Needed: Minimum classes to attend to reach target %
+   ✅ Classes Can Miss: How many classes you can skip safely
+   ✅ Remaining Classes: Total - Classes Held
+
+   📊 Formula Used:
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Required Present = (Required % × Total Classes) / 100
+   Classes Needed = Required Present - Current Present
+   Max Absences = Total Classes - Required Present
+   Classes Can Miss = Max Absences - Current Absences
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. DANGER ZONE WARNING ⚠️
+   ───────────────────────
+   ✅ Red gradient alert with pulsing animation
+   ✅ Triggered when: Remaining Classes = Classes Needed
+   ✅ Message: "You MUST attend ALL remaining classes!"
+   ✅ Means: Cannot miss even ONE more class
+
+   Visual Design:
+   - Red gradient background (#ff6b6b to #ee5a52)
+   - 3px red border with shadow
+   - Pulsing animation effect
+   - Large uppercase text
+
+4. DEAD ZONE WARNING ☠️
+   ─────────────────────
+   ✅ Black gradient alert with red border
+   ✅ Triggered when: Present + Remaining < Required Present
+   ✅ Message: "Even attending all remaining classes won't help"
+   ✅ Means: Impossible to reach target percentage now
+
+   Visual Design:
+   - Dark gradient background (#2d3436 to #000000)
+   - 3px red border with stronger shadow
+   - Pulsing animation effect
+   - Skull emoji indicator ☠️
+
+5. EDIT COURSES FUNCTIONALITY
+   ───────────────────────────
+   ✅ Edit button (✏️) on every course in courses list
+   ✅ New route: /course/<id>/edit (GET & POST)
+   ✅ Can update: Course Code, Name, Teacher, Semester, Total Classes
+   ✅ Validation: Cannot use duplicate course code
+   ✅ User permission check (can only edit own courses)
+
+6. EDIT TEACHERS FUNCTIONALITY
+   ─────────────────────────────
+   ✅ Edit button (✏️) on every teacher in teachers list
+   ✅ New route: /teacher/<id>/edit (GET & POST)
+   ✅ Can update: Name, Email, Department
+   ✅ User permission check (can only edit own teachers)
+
+7. ENHANCED MARK ATTENDANCE PAGE
+   ───────────────────────────────
+   ✅ Shows course info box with:
+      - Total Classes scheduled
+      - Classes marked so far
+      - Remaining classes to mark
+   ✅ Visual blue info box with icons
+   ✅ Helps user track progress while marking
+
+═══════════════════════════════════════════════════════════════════════
+📁 FILES MODIFIED
+═══════════════════════════════════════════════════════════════════════
+
+1. schema.sql
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CHANGE: total_classes INT DEFAULT 0 → total_classes INT NOT NULL DEFAULT 0
+   LINE: 40
+   REASON: Enforce total classes tracking for calculations
+
+2. app.py
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   a) course_detail() function (Lines 119-201)
+      ────────────────────────────────────────
+      NEW CALCULATIONS:
+      - total_classes (from DB, not count of records)
+      - classes_held (attendance records count)
+      - remaining_classes
+      - classes_needed (to reach target)
+      - classes_can_miss (buffer available)
+      - danger_zone (boolean flag)
+      - dead_zone (boolean flag)
+      
+      NEW TEMPLATE VARIABLES PASSED:
+      - total_classes, classes_held, remaining_classes
+      - classes_needed, classes_can_miss
+      - danger_zone, dead_zone
+
+   b) mark_attendance() function (Lines 207-243)
+      ──────────────────────────────────────────
+      UPDATED QUERY: Now fetches total_classes and classes_held count
+      PASSES TO TEMPLATE: course object with total_classes, classes_held
+
+   c) NEW ROUTE: edit_course() (Lines 427-469)
+      ─────────────────────────────────────────
+      PATH: /course/<int:course_id>/edit
+      METHODS: GET (show form), POST (save changes)
+      VALIDATES: User ownership
+      UPDATES: course_code, course_name, teacher_id, semester, total_classes
+      RENDERS: edit_course.html
+
+   d) NEW ROUTE: edit_teacher() (Lines 397-435)
+      ──────────────────────────────────────────
+      PATH: /teacher/<int:teacher_id>/edit
+      METHODS: GET (show form), POST (save changes)
+      VALIDATES: User ownership
+      UPDATES: name, email, department
+      RENDERS: edit_teacher.html
+
+3. templates/course_detail.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   NEW SECTIONS ADDED:
+   
+   a) Alert Zones (Lines 13-30)
+      ─────────────────────────
+      {% if dead_zone %}
+          <div class="alert alert-dead-zone">☠️ DEAD ZONE</div>
+      {% elif danger_zone %}
+          <div class="alert alert-danger-zone">⚠️ DANGER ZONE</div>
+      {% endif %}
+   
+   b) Updated Stats Grid (Lines 32-64)
+      ─────────────────────────────────
+      NEW CARDS:
+      - Total Classes (scheduled)
+      - Classes Held (marked so far)
+      - Remaining (blue color)
+      - Present
+      - Absent
+      - Current % (with color coding)
+   
+   c) Predictions Section (Lines 66-80)
+      ───────────────────────────────────
+      <div class="predictions-section">
+          - Classes Needed card (warning/success color)
+          - Classes Can Miss card (danger/success color)
+      </div>
+
+4. templates/add_course.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CHANGE: Total Classes field
+   FROM: <input type="number" ... min="0" value="0"> (optional)
+   TO:   <input type="number" ... min="1" required> (required)
+
+5. templates/mark_attendance.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NEW SECTION: Info box (Lines 8-14)
+   ────────────────────────────────────
+   <div class="info-box">
+       - Total Classes: {{ course.total_classes }}
+       - Classes Marked: {{ course.classes_held }}
+       - Remaining: {{ course.total_classes - course.classes_held }}
+   </div>
+
+6. templates/courses.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ADDED: Edit button in course-actions div
+   ───────────────────────────────────────────
+   <a href="{{ url_for('edit_course', course_id=course.id) }}" 
+      class="btn btn-small btn-secondary">✏️ Edit</a>
+
+7. templates/teachers.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ADDED: Edit button in course-actions div
+   ───────────────────────────────────────────
+   <a href="{{ url_for('edit_teacher', teacher_id=teacher.id) }}" 
+      class="btn btn-small btn-secondary">✏️ Edit</a>
+
+8. static/style.css
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   NEW STYLES ADDED (Lines 759-905):
+   
+   a) .big-number.blue (Line 450)
+      color: #60a5fa;
+   
+   b) .alert-danger-zone (Lines 759-779)
+      - Red gradient background
+      - 3px red border
+      - Pulsing animation
+      - White text
+   
+   c) .alert-dead-zone (Lines 781-801)
+      - Black gradient background
+      - 3px red border
+      - Pulsing animation
+      - White text
+   
+   d) @keyframes pulse-danger (Lines 809-816)
+      Animates box shadow for danger zone
+   
+   e) @keyframes pulse-dead (Lines 818-825)
+      Animates box shadow for dead zone
+   
+   f) .predictions-section (Lines 828-836)
+      Container for prediction cards
+   
+   g) .prediction-cards (Lines 838-842)
+      Responsive grid layout
+   
+   h) .prediction-card (Lines 844-859)
+      Individual prediction card styling
+      - White background
+      - Rounded corners
+      - Left border (color-coded)
+      - Hover effect
+   
+   i) .prediction-number (Lines 872-889)
+      Large number display with color variants
+
+═══════════════════════════════════════════════════════════════════════
+📄 NEW FILES CREATED
+═══════════════════════════════════════════════════════════════════════
+
+1. templates/edit_course.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PURPOSE: Form to edit existing course
+   FIELDS: Course Code*, Course Name*, Teacher*, Semester, Total Classes*
+   ACTIONS: Save Changes, Cancel
+   VALIDATION: All * fields required
+
+2. templates/edit_teacher.html
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PURPOSE: Form to edit existing teacher
+   FIELDS: Name*, Email, Department
+   ACTIONS: Save Changes, Cancel
+   VALIDATION: Name is required
+
+═══════════════════════════════════════════════════════════════════════
+🧪 TESTING SCENARIOS
+═══════════════════════════════════════════════════════════════════════
+
+SCENARIO 1: Normal Progress
+────────────────────────────
+Total Classes: 40
+Required: 60%
+Present: 20, Absent: 5 (25 held, 15 remaining)
+
+CALCULATIONS:
+- Current %: 20/25 = 80% ✅
+- Required Present: 40 × 0.60 = 24
+- Classes Needed: 24 - 20 = 4
+- Classes Can Miss: (40 - 24) - 5 = 11
+
+RESULT: ✅ Safe zone - Can miss 11 more classes
+
+SCENARIO 2: Danger Zone
+───────────────────────
+Total Classes: 40
+Required: 60%
+Present: 20, Absent: 12 (32 held, 8 remaining)
+
+CALCULATIONS:
+- Current %: 20/32 = 62.5% ✅
+- Required Present: 40 × 0.60 = 24
+- Classes Needed: 24 - 20 = 4
+- Remaining: 8
+- Classes Can Miss: 0
+
+RESULT: ⚠️ DANGER ZONE - Must attend all 8 remaining classes
+
+SCENARIO 3: Dead Zone
+─────────────────────
+Total Classes: 40
+Required: 60%
+Present: 15, Absent: 20 (35 held, 5 remaining)
+
+CALCULATIONS:
+- Current %: 15/35 = 42.86% ❌
+- Required Present: 40 × 0.60 = 24
+- Maximum Possible: 15 + 5 = 20 (< 24)
+
+RESULT: ☠️ DEAD ZONE - Impossible to reach 60%
+
+SCENARIO 4: Edit Course
+───────────────────────
+ACTION: Change total classes from 40 to 45
+RESULT: All calculations automatically update
+- New Classes Needed
+- New Classes Can Miss
+- Zone status may change
+
+SCENARIO 5: Edit Teacher
+────────────────────────
+ACTION: Update teacher name/email/department
+RESULT: Changes reflect in all courses using that teacher
+
+═══════════════════════════════════════════════════════════════════════
+🎨 UI/UX IMPROVEMENTS
+═══════════════════════════════════════════════════════════════════════
+
+1. Color-Coded Statistics
+   - Green: Good attendance, classes can miss
+   - Red: Poor attendance, danger zone
+   - Blue: Remaining classes
+   - Yellow/Orange: Warning states
+
+2. Animated Alerts
+   - Pulsing shadow effect
+   - High contrast colors
+   - Large, bold text
+   - Emoji indicators
+
+3. Prediction Cards
+   - Hover animation
+   - Left border color coding
+   - Large numbers for quick scanning
+   - Descriptive explanations
+
+4. Edit Buttons
+   - Pencil emoji (✏️) for edit
+   - Trash emoji (🗑️) for delete
+   - Secondary color for edit (blue-gray)
+   - Danger color for delete (red)
+
+5. Info Boxes
+   - Light blue background
+   - Clear hierarchy
+   - Icon usage
+   - Concise information
+
+═══════════════════════════════════════════════════════════════════════
+🔄 MIGRATION STEPS (For Existing Users)
+═══════════════════════════════════════════════════════════════════════
+
+IF YOU ALREADY HAVE THE DATABASE SET UP:
+
+1. Update Database Schema
+   ────────────────────────
+   sudo mariadb sixtypercent -e "ALTER TABLE courses MODIFY COLUMN total_classes INT NOT NULL DEFAULT 0;"
+
+2. Update Existing Courses
+   ──────────────────────────
+   Go to "My Courses" → Click "✏️ Edit" on each course
+   → Enter the correct total classes value
+   
+   OR manually update via SQL:
+   UPDATE courses SET total_classes = 40 WHERE id = 1;
+
+3. Restart Flask Application
+   ───────────────────────────
+   Ctrl+C in the terminal running Flask
+   python app.py
+
+4. Test Features
+   ──────────────
+   - Create new course with required total classes
+   - View course details to see predictions
+   - Mark attendance to trigger zone warnings
+   - Edit courses and teachers
+
+═══════════════════════════════════════════════════════════════════════
+📊 VISUAL LAYOUT CHANGES
+═══════════════════════════════════════════════════════════════════════
+
+BEFORE:
+┌─────────────────────────────────────────┐
+│ Course Header                           │
+├─────────────────────────────────────────┤
+│ [Total] [Present] [Absent] [Current %] │
+├─────────────────────────────────────────┤
+│ Settings                                │
+├─────────────────────────────────────────┤
+│ Attendance Records Table                │
+└─────────────────────────────────────────┘
+
+AFTER:
+┌─────────────────────────────────────────┐
+│ Course Header                           │
+├─────────────────────────────────────────┤
+│ ⚠️ DANGER ZONE / ☠️ DEAD ZONE (if any)  │
+├─────────────────────────────────────────┤
+│ [Total] [Held] [Remaining]              │
+│ [Present] [Absent] [Current %]          │
+├─────────────────────────────────────────┤
+│ 📊 Attendance Analysis                  │
+│ [Classes Needed] [Classes Can Miss]     │
+├─────────────────────────────────────────┤
+│ Settings                                │
+├─────────────────────────────────────────┤
+│ Attendance Records Table                │
+└─────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+🚀 HOW TO USE NEW FEATURES
+═══════════════════════════════════════════════════════════════════════
+
+1. CREATE COURSE WITH TOTAL CLASSES
+   ──────────────────────────────────
+   My Courses → Add New Course → Enter Total Classes (required)
+   Example: 40 classes for a semester
+
+2. VIEW SMART PREDICTIONS
+   ───────────────────────
+   Dashboard → Click on Course Card → See "Attendance Analysis"
+   - Classes Needed: How many more to attend
+   - Classes Can Miss: Your safety buffer
+
+3. MONITOR ZONE STATUS
+   ────────────────────
+   Course Detail Page → Top of page shows alerts:
+   - No alert = Safe
+   - ⚠️ Red box = Danger Zone (can't miss any)
+   - ☠️ Black box = Dead Zone (impossible to reach)
+
+4. EDIT COURSE DETAILS
+   ────────────────────
+   My Courses → Find Course → Click "✏️ Edit"
+   Update: Code, Name, Teacher, Semester, Total Classes
+   Click "Save Changes"
+
+5. EDIT TEACHER DETAILS
+   ─────────────────────
+   My Teachers → Find Teacher → Click "✏️ Edit"
+   Update: Name, Email, Department
+   Click "Save Changes"
+
+6. TRACK PROGRESS WHILE MARKING
+   ──────────────────────────────
+   Course Detail → Mark Attendance → See info box:
+   "Total: 40 | Marked: 25 | Remaining: 15"
+
+═══════════════════════════════════════════════════════════════════════
+💡 TIPS & BEST PRACTICES
+═══════════════════════════════════════════════════════════════════════
+
+1. Set Total Classes Early
+   - Enter accurate total classes when creating course
+   - Include all scheduled classes (lectures, labs, tutorials)
+
+2. Update Total Classes if Schedule Changes
+   - Use Edit button to adjust
+   - Calculations update automatically
+
+3. Monitor Classes Can Miss
+   - Green number = Safe
+   - 0 = Danger Zone approaching
+
+4. Plan Ahead with Predictions
+   - Check "Classes Needed" before planning leaves
+   - Factor in upcoming holidays/breaks
+
+5. Regular Attendance Marking
+   - Mark attendance right after class
+   - Use notes field for context (exam, lab, etc.)
+
+═══════════════════════════════════════════════════════════════════════
+🐛 KNOWN ISSUES & LIMITATIONS
+═══════════════════════════════════════════════════════════════════════
+
+NONE - All features tested and working! ✅
+
+═══════════════════════════════════════════════════════════════════════
+📞 SUPPORT & QUESTIONS
+═══════════════════════════════════════════════════════════════════════
+
+If you encounter any issues:
+
+1. Check QUICK_FIX.txt for session-related problems
+2. Verify database is running: sudo systemctl status mariadb
+3. Check Flask logs in terminal
+4. Ensure all files are saved and Flask reloaded
+
+═══════════════════════════════════════════════════════════════════════
+✅ SUMMARY
+═══════════════════════════════════════════════════════════════════════
+
+TOTAL FILES MODIFIED: 8
+NEW FILES CREATED: 2
+NEW ROUTES ADDED: 2
+NEW CALCULATIONS: 5
+NEW ALERTS: 2
+NEW CSS CLASSES: 10+
+
+ALL FEATURES IMPLEMENTED AND READY TO USE! 🎉
+
+Happy tracking! 📚✨

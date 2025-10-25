@@ -1,0 +1,171 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│                     SIXTYPERCENT ARCHITECTURE                        │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          USER INTERACTION                           │
+│                                                                      │
+│  Browser (http://localhost:5000)                                    │
+│    │                                                                 │
+│    ├─ /login              Login Page                                │
+│    ├─ /register           Create Account                            │
+│    ├─ /dashboard          View All Courses                          │
+│    ├─ /courses            Browse & Enroll                           │
+│    ├─ /course/<id>        Course Details                            │
+│    └─ /course/<id>/mark   Mark Attendance                           │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         FLASK APPLICATION                            │
+│                              app.py                                  │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────┐       │
+│  │ ROUTES & CONTROLLERS                                     │       │
+│  │                                                          │       │
+│  │  • login()          - Authenticate user                 │       │
+│  │  • register()       - Create new account                │       │
+│  │  • dashboard()      - Show course overview              │       │
+│  │  • course_detail()  - Display course info & attendance  │       │
+│  │  • mark_attendance()- Add new attendance record         │       │
+│  │  • edit_attendance()- Update existing record            │       │
+│  │  • update_settings()- Change percentage threshold       │       │
+│  │  • enroll_course()  - Enroll in course                  │       │
+│  └─────────────────────────────────────────────────────────┘       │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────┐       │
+│  │ MIDDLEWARE & SECURITY                                    │       │
+│  │                                                          │       │
+│  │  • @login_required  - Protect routes                    │       │
+│  │  • Session Management - Track logged-in users           │       │
+│  │  • Password Hashing - Secure password storage           │       │
+│  │  • Flash Messages   - User feedback                     │       │
+│  └─────────────────────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      DATABASE CONNECTION                             │
+│                    Flask-MySQLdb + config.py                         │
+│                                                                      │
+│  Credentials from .env:                                              │
+│  • DB_HOST=localhost                                                 │
+│  • DB_USER=root                                                      │
+│  • DB_PASSWORD=****                                                  │
+│  • DB_NAME=sixtypercent                                              │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      MYSQL DATABASE                                  │
+│                         (schema.sql)                                 │
+│                                                                      │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    │
+│  │  users   │    │ teachers │    │ courses  │    │enroll-   │    │
+│  │          │    │          │    │          │    │ments     │    │
+│  │ • id     │    │ • id     │    │ • id     │    │          │    │
+│  │ • user   │    │ • name   │────┤ • teacher│◄───┤ • user   │    │
+│  │ • pass   │    │ • email  │    │ • code   │    │ • course │    │
+│  │ • name   │    │ • dept   │    │ • name   │    │ • id     │    │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘    │
+│       │                                                  │           │
+│       │                                                  │           │
+│       │          ┌──────────────────┐                   │           │
+│       │          │ attendance_      │                   │           │
+│       │          │ records          │                   │           │
+│       │          │                  │                   │           │
+│       │          │ • id             │                   │           │
+│       └──────────┤ • enrollment ◄───┘                   │           │
+│                  │ • date           │                   │           │
+│                  │ • status         │                   │           │
+│                  │ • notes          │                   │           │
+│                  └──────────────────┘                   │           │
+│                                                          │           │
+│                  ┌──────────────────┐                   │           │
+│                  │ attendance_      │                   │           │
+│                  │ settings         │                   │           │
+│                  │                  │                   │           │
+│                  │ • user  ◄────────┘                   │           │
+│                  │ • course ◄───────────────────────────┘           │
+│                  │ • required_%     │                               │
+│                  └──────────────────┘                               │
+│                                                                      │
+│  VIEW: attendance_summary (joins all tables for dashboard)          │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      TEMPLATE RENDERING                              │
+│                          (Jinja2)                                    │
+│                                                                      │
+│  templates/                                                          │
+│    ├─ base.html          Base layout + navbar                       │
+│    ├─ login.html         Login form                                 │
+│    ├─ register.html      Registration form                          │
+│    ├─ dashboard.html     Course cards grid                          │
+│    ├─ course_detail.html Attendance table + stats                   │
+│    ├─ mark_attendance.html Add attendance form                      │
+│    └─ courses.html       Course list + enroll buttons               │
+│                                                                      │
+│  static/                                                             │
+│    └─ style.css          Responsive styling                         │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      RENDERED HTML + CSS                             │
+│                    (Sent back to browser)                            │
+│                                                                      │
+│  • Beautiful purple gradient design                                  │
+│  • Responsive cards and tables                                       │
+│  • Color-coded attendance status                                     │
+│  • Interactive forms                                                 │
+│  • Flash messages for feedback                                       │
+└─────────────────────────────────────────────────────────────────────┘
+
+
+DATA FLOW EXAMPLE: Marking Attendance
+══════════════════════════════════════
+
+1. User clicks "Mark Attendance" button
+   ↓
+2. Browser GET request to /course/1/mark
+   ↓
+3. Flask app.py → mark_attendance() function
+   ↓
+4. Queries MySQL for course details
+   ↓
+5. Renders mark_attendance.html template
+   ↓
+6. User fills form and submits (POST)
+   ↓
+7. Flask validates and inserts into attendance_records table
+   ↓
+8. Redirects to course_detail page
+   ↓
+9. Queries attendance_summary view for updated stats
+   ↓
+10. Renders course_detail.html with new data
+    ↓
+11. Browser displays updated attendance percentage
+
+
+FILE DEPENDENCIES
+═════════════════
+
+app.py
+  ├─→ config.py (database settings)
+  ├─→ .env (credentials)
+  ├─→ templates/*.html (views)
+  └─→ static/style.css (styling)
+
+schema.sql
+  └─→ MySQL/MariaDB database
+
+setup.sh
+  ├─→ requirements.txt (install packages)
+  ├─→ .env.example (create .env)
+  └─→ schema.sql (import database)
+
+start.sh
+  └─→ app.py (run Flask server)
