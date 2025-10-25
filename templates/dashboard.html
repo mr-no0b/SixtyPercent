@@ -23,8 +23,8 @@
                 
                 <div class="course-stats">
                     <div class="stat">
-                        <span class="stat-label">Present/Total:</span>
-                        <span class="stat-value">{{ course.present_count or 0 }}/{{ course.total_classes }}</span>
+                        <span class="stat-label">Remaining:</span>
+                        <span class="stat-value">{{ course.remaining_classes }}</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Required:</span>
@@ -32,7 +32,18 @@
                     </div>
                 </div>
                 
-                {% if course.dead_zone %}
+                {% if course.classes_held >= course.total_classes %}
+                    {# All classes completed - show final result #}
+                    {% if course.attendance_percentage >= course.required_percentage %}
+                        <div class="safe-zone-badge">
+                            🎉 Course Complete - {{ course.attendance_percentage }}% (Required: {{ course.required_percentage }}%)
+                        </div>
+                    {% else %}
+                        <div class="dead-zone-badge">
+                            ❌ Course Complete - {{ course.attendance_percentage }}% (Required: {{ course.required_percentage }}%)
+                        </div>
+                    {% endif %}
+                {% elif course.dead_zone %}
                     <div class="dead-zone-badge">
                         ☠️ DEAD ZONE - Can't reach {{ course.required_percentage }}%
                     </div>
@@ -51,6 +62,17 @@
                 {% else %}
                     <div class="info-message">
                         ℹ️ No attendance recorded yet
+                    </div>
+                {% endif %}
+                
+                {% if course.classes_held < course.total_classes %}
+                    <div class="quick-actions">
+                        <form method="POST" action="{{ url_for('quick_mark_attendance', course_id=course.course_id, status='present') }}" style="display: inline;">
+                            <button type="submit" class="btn btn-small btn-success">✓ Present</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('quick_mark_attendance', course_id=course.course_id, status='absent') }}" style="display: inline;">
+                            <button type="submit" class="btn btn-small btn-danger">✗ Absent</button>
+                        </form>
                     </div>
                 {% endif %}
                 

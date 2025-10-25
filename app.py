@@ -141,9 +141,15 @@ def dashboard():
         # Calculate predictions
         required_present = (required_percentage * total_classes) / 100
         classes_needed = max(0, int(required_present - present) + (1 if required_present - present > int(required_present - present) else 0))
-        max_absences = int(total_classes - required_present)
-        classes_can_miss = max(0, max_absences - absent)
+        
+        # Calculate classes can miss
+        # If we need more present classes, we can only miss: remaining - classes_needed
+        # If we already have enough, we can miss all remaining
         remaining_classes = max(0, total_classes - classes_held)
+        if classes_needed > 0:
+            classes_can_miss = max(0, remaining_classes - classes_needed)
+        else:
+            classes_can_miss = remaining_classes
         
         # Determine zone status
         danger_zone = (remaining_classes > 0 and remaining_classes == classes_needed)
@@ -213,13 +219,16 @@ def course_detail(course_id):
     required_present = (required_percentage * total_classes) / 100
     classes_needed = max(0, int(required_present - present) + (1 if required_present - present > int(required_present - present) else 0))
     
-    # Calculate classes user can miss
-    # Maximum absences allowed: total_classes - required_present
-    max_absences = int(total_classes - required_present)
-    classes_can_miss = max(0, max_absences - absent)
-    
     # Remaining classes
     remaining_classes = max(0, total_classes - classes_held)
+    
+    # Calculate classes user can miss
+    # If we need more present classes, we can only miss: remaining - classes_needed
+    # If we already have enough, we can miss all remaining
+    if classes_needed > 0:
+        classes_can_miss = max(0, remaining_classes - classes_needed)
+    else:
+        classes_can_miss = remaining_classes
     
     # Danger Zone: Cannot miss any more classes
     # This happens when: remaining_classes == classes_needed
@@ -260,23 +269,44 @@ def mark_attendance(course_id):
         
         cur = mysql.connection.cursor()
         
-        # Get enrollment_id
+        # Get enrollment_id and course details
         cur.execute("""
-            SELECT id FROM enrollments
-            WHERE user_id = %s AND course_id = %s
+            SELECT e.id as enrollment_id, c.total_classes
+            FROM enrollments e
+            JOIN courses c ON e.course_id = c.id
+            WHERE e.user_id = %s AND e.course_id = %s
         """, (user_id, course_id))
-        enrollment = cur.fetchone()
+        result = cur.fetchone()
         
-        if enrollment:
+        if result:
+            enrollment_id = result['enrollment_id']
+            total_classes = result['total_classes']
+            
+            # Check current attendance count
+            cur.execute("""
+                SELECT COUNT(*) as count FROM attendance_records
+                WHERE enrollment_id = %s
+            """, (enrollment_id,))
+            count_result = cur.fetchone()
+            classes_held = count_result['count'] if count_result else 0
+            
+            # Validate against total_classes
+            if classes_held >= total_classes:
+                flash(f'Cannot add more attendance! Already marked {classes_held} out of {total_classes} total classes.', 'danger')
+                cur.close()
+                return redirect(url_for('course_detail', course_id=course_id))
+            
             try:
                 cur.execute("""
                     INSERT INTO attendance_records (enrollment_id, class_date, status, notes)
                     VALUES (%s, %s, %s, %s)
-                """, (enrollment['id'], class_date, status, notes))
+                """, (enrollment_id, class_date, status, notes))
                 mysql.connection.commit()
                 flash('Attendance marked successfully!', 'success')
             except Exception as e:
-                flash('Attendance already marked for this date or error occurred.', 'danger')
+                flash(f'Error marking attendance: {str(e)}', 'danger')
+        else:
+            flash('Enrollment not found!', 'danger')
         
         cur.close()
         return redirect(url_for('course_detail', course_id=course_id))
@@ -295,6 +325,65 @@ def mark_attendance(course_id):
     cur.close()
     
     return render_template('mark_attendance.html', course=course, course_id=course_id)
+
+# Quick mark attendance (from dashboard)
+@app.route('/course/<int:course_id>/quick-mark/<status>', methods=['POST'])
+@login_required
+def quick_mark_attendance(course_id, status):
+    user_id = session['user_id']
+    
+    # Validate status
+    if status not in ['present', 'absent']:
+        flash('Invalid status!', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    cur = mysql.connection.cursor()
+    
+    # Get enrollment_id and course details
+    cur.execute("""
+        SELECT e.id as enrollment_id, c.total_classes
+        FROM enrollments e
+        JOIN courses c ON e.course_id = c.id
+        WHERE e.user_id = %s AND e.course_id = %s
+    """, (user_id, course_id))
+    result = cur.fetchone()
+    
+    if result:
+        enrollment_id = result['enrollment_id']
+        total_classes = result['total_classes']
+        
+        # Check current attendance count
+        cur.execute("""
+            SELECT COUNT(*) as count FROM attendance_records
+            WHERE enrollment_id = %s
+        """, (enrollment_id,))
+        count_result = cur.fetchone()
+        classes_held = count_result['count'] if count_result else 0
+        
+        # Validate against total_classes
+        if classes_held >= total_classes:
+            flash(f'Cannot add more attendance! Already marked {classes_held} out of {total_classes} total classes.', 'danger')
+            cur.close()
+            return redirect(url_for('dashboard'))
+        
+        # Use today's date
+        from datetime import date
+        today = date.today()
+        
+        try:
+            cur.execute("""
+                INSERT INTO attendance_records (enrollment_id, class_date, status, notes)
+                VALUES (%s, %s, %s, %s)
+            """, (enrollment_id, today, status, 'Quick marked from dashboard'))
+            mysql.connection.commit()
+            flash(f'Attendance marked as {status.upper()} for today!', 'success')
+        except Exception as e:
+            flash(f'Error marking attendance: {str(e)}', 'danger')
+    else:
+        flash('Enrollment not found!', 'danger')
+    
+    cur.close()
+    return redirect(url_for('dashboard'))
 
 # Update attendance
 @app.route('/attendance/<int:attendance_id>/edit', methods=['POST'])

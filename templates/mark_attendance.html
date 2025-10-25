@@ -14,6 +14,12 @@
         <p>Remaining: <strong>{{ course.total_classes - course.classes_held }}</strong></p>
     </div>
     
+    {% if course.classes_held >= course.total_classes %}
+    <div class="alert" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+        <strong>⚠️ Warning:</strong> You have already marked {{ course.classes_held }} out of {{ course.total_classes }} total classes. Cannot add more attendance records!
+    </div>
+    <a href="{{ url_for('course_detail', course_id=course_id) }}" class="btn btn-secondary">Back to Course Details</a>
+    {% else %}
     <form method="POST" action="{{ url_for('mark_attendance', course_id=course_id) }}" class="attendance-form">
         <div class="form-group">
             <label for="class_date">Class Date</label>
@@ -44,10 +50,14 @@
             <a href="{{ url_for('course_detail', course_id=course_id) }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
+    {% endif %}
 </div>
 
 <script>
     // Set today's date as default
-    document.getElementById('class_date').valueAsDate = new Date();
+    const dateInput = document.getElementById('class_date');
+    if (dateInput) {
+        dateInput.valueAsDate = new Date();
+    }
 </script>
 {% endblock %}
